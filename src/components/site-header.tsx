@@ -57,6 +57,9 @@ export function SiteHeader() {
           <Link className="menu-link" data-active={pathname === "/"} href="/" tabIndex={isOpen ? 0 : -1} onClick={() => setIsOpen(false)}>
             <span>Inicio</span><small>Actividad actual</small>
           </Link>
+          <Link className="menu-link" data-active={pathname === "/metricas"} href="/metricas" tabIndex={isOpen ? 0 : -1} onClick={() => setIsOpen(false)}>
+            <span>Métricas</span><small>Distribución de tu día</small>
+          </Link>
           <div className="menu-divider" />
           {schedules.map((schedule) => {
             const href = `/horario/${schedule.id}`;
