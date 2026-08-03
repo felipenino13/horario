@@ -178,6 +178,16 @@ main { min-height: 100vh; }
 .work-mode-switch button[data-active="true"] { color: #082017; background: #8ed9ac; }
 .work-mode-switch button:focus-visible { outline: 3px solid rgba(255,255,255,0.3); outline-offset: 2px; }
 .work-mode-switch button:disabled { cursor: not-allowed; opacity: 0.42; }
+
+.notification-control { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 18px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.14); }
+.notification-control > div { display: grid; gap: 5px; }
+.notification-control span { color: #acd9bd; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.notification-control small { max-width: 270px; color: #a8bdb0; font-size: 0.72rem; line-height: 1.4; }
+.notification-control button { flex: 0 0 auto; min-height: 40px; padding: 0 15px; border: 1px solid rgba(255,255,255,0.18); border-radius: 11px; color: #fff; background: rgba(255,255,255,0.06); cursor: pointer; font-weight: 800; }
+.notification-control button:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
+.notification-control button[data-enabled="true"] { color: #082017; border-color: #8ed9ac; background: #8ed9ac; }
+.notification-control button:focus-visible { outline: 3px solid rgba(255,255,255,0.3); outline-offset: 2px; }
+.notification-control button:disabled { cursor: not-allowed; opacity: 0.42; }
 .clock-placeholder { width: 85%; height: 58px; margin-top: 12px; border-radius: 10px; background: rgba(255,255,255,0.12); }
 .current-task h2 { margin: 8px 0 10px; font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.05; letter-spacing: -0.04em; }
 .current-task > p { margin: 0; color: #d2e4d8; line-height: 1.55; }
@@ -274,6 +284,7 @@ td { line-height: 1.35; }
   .clock-block, .current-task { min-height: 50dvh; padding: 88px 20px 36px; }
   .clock-block { padding-top: 36px; }
   .countdown-block { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .notification-control { align-items: flex-start; flex-direction: column; }
   .card-heading { align-items: flex-start; flex-direction: column; padding: 22px 18px; }
   th, td { padding: 13px 18px; }
   .time { min-width: 116px; }

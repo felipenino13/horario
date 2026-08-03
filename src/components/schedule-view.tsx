@@ -20,6 +20,7 @@ type ClockInfo = {
 type Holiday = { date: string; localName: string; name: string };
 type HolidayStatus = "idle" | "loading" | "ready" | "error";
 type WorkScheduleId = "oficina" | "casa";
+type NotificationState = NotificationPermission | "unsupported";
 
 type CurrentActivity = {
   entry: ScheduleEntry;
@@ -138,7 +139,11 @@ export function ScheduleView({ mode = "overview", scheduleId }: ScheduleViewProp
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [holidayStatus, setHolidayStatus] = useState<HolidayStatus>("idle");
   const [manualOverride, setManualOverride] = useState<WorkScheduleId | null>(null);
+  const [notificationState, setNotificationState] = useState<NotificationState>("default");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const loadedOverrideDate = useRef<string | null>(null);
+  const lastActivityKey = useRef<string | null>(null);
+  const lastNotificationSchedule = useRef<string | null>(null);
 
   const holiday = useMemo(
     () => clock ? holidays.find((item) => item.date === clock.isoDate) ?? null : null,
@@ -148,6 +153,14 @@ export function ScheduleView({ mode = "overview", scheduleId }: ScheduleViewProp
   const canOverrideWorkMode = Boolean(clock && clock.dayIndex > 0 && clock.dayIndex < 6 && !holiday);
   const activeId = scheduleId ?? (canOverrideWorkMode && manualOverride ? manualOverride : automaticId);
   const activeSchedule = schedules.find((schedule) => schedule.id === activeId);
+  const currentActivity = useMemo(
+    () => activeSchedule && clock ? findCurrentActivity(activeSchedule, clock.minuteOfDay, clock.second) : null,
+    [activeSchedule, clock],
+  );
+  const nextActivity = useMemo(
+    () => activeSchedule && clock ? findNextActivity(activeSchedule, currentActivity, clock.minuteOfDay) : null,
+    [activeSchedule, clock, currentActivity],
+  );
 
   useEffect(() => {
     const updateClock = () => {
@@ -188,6 +201,57 @@ export function ScheduleView({ mode = "overview", scheduleId }: ScheduleViewProp
     return () => { cancelled = true; };
   }, [clock?.year, mode]);
 
+  useEffect(() => {
+    if (mode !== "overview") return;
+    const readNotificationState = () => {
+      if (!("Notification" in window)) {
+        setNotificationState("unsupported");
+        return;
+      }
+      setNotificationState(Notification.permission);
+      setNotificationsEnabled(
+        Notification.permission === "granted" &&
+        window.localStorage.getItem("schedule-notifications") === "true",
+      );
+    };
+    readNotificationState();
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== "overview" || !clock || !currentActivity || !activeSchedule) return;
+    const activityKey = `${activeSchedule.id}:${currentActivity.index}`;
+
+    if (lastNotificationSchedule.current !== activeSchedule.id) {
+      lastNotificationSchedule.current = activeSchedule.id;
+      lastActivityKey.current = activityKey;
+      return;
+    }
+
+    if (lastActivityKey.current === null) {
+      lastActivityKey.current = activityKey;
+      return;
+    }
+
+    if (lastActivityKey.current !== activityKey) {
+      lastActivityKey.current = activityKey;
+      if (notificationsEnabled && notificationState === "granted") {
+        try {
+          const notification = new Notification(`Ahora: ${currentActivity.entry.activity}`, {
+            body: `${activeSchedule.label} · ${currentActivity.entry.time} · ${currentActivity.entry.duration}`,
+            icon: "/icon.svg",
+            tag: "schedule-current-activity",
+          });
+          notification.onclick = () => {
+            window.focus();
+            notification.close();
+          };
+        } catch {
+          // Algunos navegadores móviles solo permiten notificaciones desde una PWA.
+        }
+      }
+    }
+  }, [activeSchedule, clock, currentActivity, mode, notificationState, notificationsEnabled]);
+
   const selectWorkMode = (nextMode: WorkScheduleId) => {
     if (!clock || !canOverrideWorkMode) return;
     const storageKey = `schedule-override:${clock.isoDate}`;
@@ -200,14 +264,24 @@ export function ScheduleView({ mode = "overview", scheduleId }: ScheduleViewProp
     window.localStorage.setItem(storageKey, nextMode);
   };
 
-  const currentActivity = useMemo(
-    () => activeSchedule && clock ? findCurrentActivity(activeSchedule, clock.minuteOfDay, clock.second) : null,
-    [activeSchedule, clock],
-  );
-  const nextActivity = useMemo(
-    () => activeSchedule && clock ? findNextActivity(activeSchedule, currentActivity, clock.minuteOfDay) : null,
-    [activeSchedule, clock, currentActivity],
-  );
+  const toggleNotifications = async () => {
+    if (!("Notification" in window) || notificationState === "unsupported" || notificationState === "denied") return;
+
+    if (notificationsEnabled) {
+      setNotificationsEnabled(false);
+      window.localStorage.setItem("schedule-notifications", "false");
+      return;
+    }
+
+    const permission = Notification.permission === "granted"
+      ? "granted"
+      : await Notification.requestPermission();
+    setNotificationState(permission);
+    if (permission === "granted") {
+      setNotificationsEnabled(true);
+      window.localStorage.setItem("schedule-notifications", "true");
+    }
+  };
 
   if (!activeSchedule) {
     return <p className="empty-state">No hay horarios disponibles.</p>;
@@ -283,6 +357,26 @@ export function ScheduleView({ mode = "overview", scheduleId }: ScheduleViewProp
                 {!canOverrideWorkMode && clock && (
                   <small>Disponible únicamente en días laborales no festivos.</small>
                 )}
+              </div>
+
+              <div className="notification-control">
+                <div>
+                  <span>Notificaciones</span>
+                  <small>
+                    {notificationState === "unsupported" && "Este navegador no admite notificaciones."}
+                    {notificationState === "denied" && "Están bloqueadas en la configuración del navegador."}
+                    {notificationState !== "unsupported" && notificationState !== "denied" && notificationsEnabled && "Te avisaremos al comenzar una actividad nueva."}
+                    {notificationState !== "unsupported" && notificationState !== "denied" && !notificationsEnabled && "Recibe avisos mientras la app permanezca abierta."}
+                  </small>
+                </div>
+                <button
+                  type="button"
+                  data-enabled={notificationsEnabled}
+                  disabled={notificationState === "unsupported" || notificationState === "denied"}
+                  onClick={toggleNotifications}
+                >
+                  {notificationsEnabled ? "Pausar" : "Activar"}
+                </button>
               </div>
             </>
           ) : (
