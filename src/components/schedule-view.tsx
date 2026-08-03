@@ -141,9 +141,11 @@ export function ScheduleView({ mode = "overview", scheduleId }: ScheduleViewProp
   const [manualOverride, setManualOverride] = useState<WorkScheduleId | null>(null);
   const [notificationState, setNotificationState] = useState<NotificationState>("default");
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
   const loadedOverrideDate = useRef<string | null>(null);
   const lastActivityKey = useRef<string | null>(null);
   const lastNotificationSchedule = useRef<string | null>(null);
+  const notificationRegistration = useRef<ServiceWorkerRegistration | null>(null);
 
   const holiday = useMemo(
     () => clock ? holidays.find((item) => item.date === clock.isoDate) ?? null : null,
@@ -215,7 +217,30 @@ export function ScheduleView({ mode = "overview", scheduleId }: ScheduleViewProp
       );
     };
     readNotificationState();
+
+    if ("serviceWorker" in navigator && window.isSecureContext) {
+      navigator.serviceWorker.register("/notification-sw.js")
+        .then((registration) => { notificationRegistration.current = registration; })
+        .catch(() => { notificationRegistration.current = null; });
+    }
   }, [mode]);
+
+  const showNotification = async (title: string, body: string) => {
+    const options: NotificationOptions = { body, icon: "/icon.svg", tag: "schedule-current-activity" };
+    try {
+      if ("serviceWorker" in navigator && window.isSecureContext) {
+        const registration = notificationRegistration.current ?? await navigator.serviceWorker.ready;
+        notificationRegistration.current = registration;
+        await registration.showNotification(title, options);
+      } else {
+        const notification = new Notification(title, options);
+        notification.onclick = () => { window.focus(); notification.close(); };
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   useEffect(() => {
     if (mode !== "overview" || !clock || !currentActivity || !activeSchedule) return;
@@ -235,19 +260,10 @@ export function ScheduleView({ mode = "overview", scheduleId }: ScheduleViewProp
     if (lastActivityKey.current !== activityKey) {
       lastActivityKey.current = activityKey;
       if (notificationsEnabled && notificationState === "granted") {
-        try {
-          const notification = new Notification(`Ahora: ${currentActivity.entry.activity}`, {
-            body: `${activeSchedule.label} · ${currentActivity.entry.time} · ${currentActivity.entry.duration}`,
-            icon: "/icon.svg",
-            tag: "schedule-current-activity",
-          });
-          notification.onclick = () => {
-            window.focus();
-            notification.close();
-          };
-        } catch {
-          // Algunos navegadores móviles solo permiten notificaciones desde una PWA.
-        }
+        void showNotification(
+          `Ahora: ${currentActivity.entry.activity}`,
+          `${activeSchedule.label} · ${currentActivity.entry.time} · ${currentActivity.entry.duration}`,
+        );
       }
     }
   }, [activeSchedule, clock, currentActivity, mode, notificationState, notificationsEnabled]);
@@ -269,6 +285,7 @@ export function ScheduleView({ mode = "overview", scheduleId }: ScheduleViewProp
 
     if (notificationsEnabled) {
       setNotificationsEnabled(false);
+      setNotificationMessage(null);
       window.localStorage.setItem("schedule-notifications", "false");
       return;
     }
@@ -280,6 +297,17 @@ export function ScheduleView({ mode = "overview", scheduleId }: ScheduleViewProp
     if (permission === "granted") {
       setNotificationsEnabled(true);
       window.localStorage.setItem("schedule-notifications", "true");
+      const delivered = await showNotification(
+        "Notificaciones activadas",
+        "Te avisaremos cuando comience una actividad nueva mientras la aplicación esté abierta.",
+      );
+      setNotificationMessage(delivered
+        ? "Aviso de prueba enviado correctamente."
+        : "El navegador no pudo mostrar el aviso. Revisa los permisos del sitio y del sistema.");
+    } else if (permission === "denied") {
+      setNotificationsEnabled(false);
+      window.localStorage.setItem("schedule-notifications", "false");
+      setNotificationMessage("El permiso fue bloqueado. Habilítalo desde la configuración del sitio.");
     }
   };
 
@@ -364,8 +392,9 @@ export function ScheduleView({ mode = "overview", scheduleId }: ScheduleViewProp
                   <span>Notificaciones</span>
                   <small>
                     {notificationState === "unsupported" && "Este navegador no admite notificaciones."}
-                    {notificationState === "denied" && "Están bloqueadas en la configuración del navegador."}
-                    {notificationState !== "unsupported" && notificationState !== "denied" && notificationsEnabled && "Te avisaremos al comenzar una actividad nueva."}
+                    {notificationState === "denied" && "Están bloqueadas. Habilítalas desde el candado de la barra de direcciones."}
+                    {notificationState !== "unsupported" && notificationState !== "denied" && notificationMessage}
+                    {notificationState !== "unsupported" && notificationState !== "denied" && !notificationMessage && notificationsEnabled && "Te avisaremos al comenzar una actividad nueva."}
                     {notificationState !== "unsupported" && notificationState !== "denied" && !notificationsEnabled && "Recibe avisos mientras la app permanezca abierta."}
                   </small>
                 </div>
