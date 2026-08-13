@@ -17,47 +17,53 @@ const evening: ScheduleEntry[] = [
   { time: "9:30 p. m.", duration: "1h", activity: "Acomodarse para dormir" },
 ];
 
+const workdayUntilSix: ScheduleEntry[] = [
+  { time: "8:00 a. m.", duration: "2h 30m", activity: "Trabajo" },
+  { time: "10:30 a. m.", duration: "30m", activity: "Pausa" },
+  { time: "11:00 a. m.", duration: "2h 30m", activity: "Trabajo" },
+  { time: "1:30 p. m.", duration: "1h", activity: "Almuerzo" },
+  { time: "2:30 p. m.", duration: "1h 30m", activity: "Trabajo" },
+  { time: "4:00 p. m.", duration: "30m", activity: "Pausa" },
+  { time: "4:30 p. m.", duration: "1h 30m", activity: "Trabajo" },
+];
+
 const workdayUntilFive: ScheduleEntry[] = [
-  { time: "7:00 a. m.", duration: "2h 30m", activity: "Trabajo" },
-  { time: "9:30 a. m.", duration: "30m", activity: "Pausa" },
-  { time: "10:00 a. m.", duration: "2h 30m", activity: "Trabajo" },
-  { time: "12:30 p. m.", duration: "1h", activity: "Almuerzo" },
-  { time: "1:30 p. m.", duration: "1h 30m", activity: "Trabajo" },
-  { time: "3:00 p. m.", duration: "30m", activity: "Pausa" },
-  { time: "3:30 p. m.", duration: "1h 30m", activity: "Trabajo" },
+  ...workdayUntilSix.slice(0, -1),
+  { time: "4:30 p. m.", duration: "30m", activity: "Trabajo" },
 ];
 
-const workdayUntilFour: ScheduleEntry[] = [
-  ...workdayUntilFive.slice(0, -1),
-  { time: "3:30 p. m.", duration: "30m", activity: "Trabajo" },
+const lateOfficeEvening: ScheduleEntry[] = [
+  { time: "8:30 p. m.", duration: "30m", activity: "Preparar comida" },
+  { time: "9:00 p. m.", duration: "30m", activity: "Cenar" },
+  { time: "9:30 p. m.", duration: "1h", activity: "Acomodarse para dormir" },
 ];
 
-function createOfficeEntries(endsAtFour = false): ScheduleEntry[] {
+function createOfficeEntries(endsAtFive = false): ScheduleEntry[] {
   return [
-    { time: "4:00 a. m.", duration: "15m", activity: "Despertar" },
-    { time: "4:15 a. m.", duration: "15m", activity: "Baño" },
-    { time: "4:30 a. m.", duration: "30m", activity: "Desayuno" },
-    { time: "5:00 a. m.", duration: "2h", activity: "Desplazamiento al trabajo" },
-    ...(endsAtFour ? workdayUntilFour : workdayUntilFive),
-    { time: endsAtFour ? "4:00 p. m." : "5:00 p. m.", duration: "2h", activity: "Desplazamiento a casa" },
-    { time: endsAtFour ? "6:00 p. m." : "7:00 p. m.", duration: "30m", activity: "Acomodarse en casa" },
-    ...evening,
-    { time: "10:30 p. m.", duration: "5h 30m", activity: "Dormir" },
+    { time: "5:00 a. m.", duration: "15m", activity: "Despertar" },
+    { time: "5:15 a. m.", duration: "15m", activity: "Baño" },
+    { time: "5:30 a. m.", duration: "30m", activity: "Desayuno" },
+    { time: "6:00 a. m.", duration: "2h", activity: "Desplazamiento al trabajo" },
+    ...(endsAtFive ? workdayUntilFive : workdayUntilSix),
+    { time: endsAtFive ? "5:00 p. m." : "6:00 p. m.", duration: "2h", activity: "Desplazamiento a casa" },
+    { time: endsAtFive ? "7:00 p. m." : "8:00 p. m.", duration: "30m", activity: "Acomodarse en casa" },
+    ...(endsAtFive ? evening : lateOfficeEvening),
+    { time: "10:30 p. m.", duration: "6h 30m", activity: "Dormir" },
   ];
 }
 
-function createHomeEntries(endsAtFour = false): ScheduleEntry[] {
+function createHomeEntries(endsAtFive = false): ScheduleEntry[] {
   return [
-    { time: "4:00 a. m.", duration: "15m", activity: "Despertar" },
-    { time: "4:15 a. m.", duration: "15m", activity: "Baño" },
-    { time: "4:30 a. m.", duration: "1h 30m", activity: "Estudio" },
-    { time: "6:00 a. m.", duration: "30m", activity: "Desayuno" },
-    { time: "6:30 a. m.", duration: "30m", activity: "Ordenar casa" },
-    ...(endsAtFour ? workdayUntilFour : workdayUntilFive),
-    { time: endsAtFour ? "4:00 p. m." : "5:00 p. m.", duration: endsAtFour ? "3h" : "2h", activity: "Tiempo en familia" },
+    { time: "5:00 a. m.", duration: "15m", activity: "Despertar" },
+    { time: "5:15 a. m.", duration: "15m", activity: "Baño" },
+    { time: "5:30 a. m.", duration: "1h 30m", activity: "Estudio" },
+    { time: "7:00 a. m.", duration: "30m", activity: "Desayuno" },
+    { time: "7:30 a. m.", duration: "30m", activity: "Ordenar casa" },
+    ...(endsAtFive ? workdayUntilFive : workdayUntilSix),
+    { time: endsAtFive ? "5:00 p. m." : "6:00 p. m.", duration: endsAtFive ? "2h" : "1h", activity: "Tiempo en familia" },
     { time: "7:00 p. m.", duration: "30m", activity: "Tiempo Cris" },
     ...evening,
-    { time: "10:30 p. m.", duration: "5h 30m", activity: "Dormir" },
+    { time: "10:30 p. m.", duration: "6h 30m", activity: "Dormir" },
   ];
 }
 
@@ -106,8 +112,8 @@ export const schedules: Schedule[] = [
 ];
 
 export function getScheduleForDay(schedule: Schedule, dayIndex: number): Schedule {
-  const endsAtFour = dayIndex >= 3 && dayIndex <= 5;
-  if (!endsAtFour || (schedule.id !== "oficina" && schedule.id !== "casa")) return schedule;
+  const endsAtFive = dayIndex >= 3 && dayIndex <= 5;
+  if (!endsAtFive || (schedule.id !== "oficina" && schedule.id !== "casa")) return schedule;
 
   return {
     ...schedule,
