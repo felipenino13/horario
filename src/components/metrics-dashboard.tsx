@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { schedules, type ScheduleEntry } from "@/data/schedules";
+import { getScheduleForDay, schedules, type ScheduleEntry } from "@/data/schedules";
 
 const DAY_MINUTES = 24 * 60;
 
@@ -86,7 +86,15 @@ function createConicGradient(metrics: Metric[]) {
 
 export function MetricsDashboard() {
   const [scheduleId, setScheduleId] = useState("oficina");
-  const schedule = schedules.find((item) => item.id === scheduleId) ?? schedules[0];
+  const [dayIndex] = useState(() => {
+    const weekday = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Bogota",
+      weekday: "short",
+    }).format(new Date());
+    return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekday);
+  });
+  const baseSchedule = schedules.find((item) => item.id === scheduleId) ?? schedules[0];
+  const schedule = useMemo(() => getScheduleForDay(baseSchedule, dayIndex), [baseSchedule, dayIndex]);
   const metrics = useMemo(() => aggregateCategories(schedule.entries), [schedule]);
   const activities = useMemo(() => aggregateActivities(schedule.entries), [schedule]);
   const scheduledMinutes = schedule.entries.reduce((sum, entry) => sum + durationToMinutes(entry.duration), 0);

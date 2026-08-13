@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { schedules, type Schedule, type ScheduleEntry } from "@/data/schedules";
+import { getScheduleForDay, schedules, type Schedule, type ScheduleEntry } from "@/data/schedules";
 
 const TIME_ZONE = "America/Bogota";
 
@@ -154,7 +154,11 @@ export function ScheduleView({ mode = "overview", scheduleId }: ScheduleViewProp
   const automaticId = clock ? getAutomaticScheduleId(clock, holiday) : "oficina";
   const canOverrideWorkMode = Boolean(clock && clock.dayIndex > 0 && clock.dayIndex < 6 && !holiday);
   const activeId = scheduleId ?? (canOverrideWorkMode && manualOverride ? manualOverride : automaticId);
-  const activeSchedule = schedules.find((schedule) => schedule.id === activeId);
+  const baseSchedule = schedules.find((schedule) => schedule.id === activeId);
+  const activeSchedule = useMemo(
+    () => baseSchedule ? getScheduleForDay(baseSchedule, clock?.dayIndex ?? 1) : undefined,
+    [baseSchedule, clock?.dayIndex],
+  );
   const currentActivity = useMemo(
     () => activeSchedule && clock ? findCurrentActivity(activeSchedule, clock.minuteOfDay, clock.second) : null,
     [activeSchedule, clock],
